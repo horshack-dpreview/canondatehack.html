@@ -39,9 +39,11 @@ session for anything other than running this page - it disables the normal
 cross-domain security measures and will put your data at risk if you use it
 for general web browsing.
 
+```
 Windows: "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" --disable-web-security --user-data-dir=%homepath%\chromenosecurity
 Mac: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"--disable-web-security --user-data-dir=~/.chromenosecurity 
 Linux: chrome --disable-web-security --user-data-dir=~/.chromenosecurity   
+```
 
 ## Camera Setup
 
