@@ -11,8 +11,8 @@ https://www.visionrouge.net/canon-r5-overheating-hack-solved/
 
 **WARNING: Bypassing Canon's thermal management can cause your camera to
 operate at temperatures much higher than it was designed to accommodate.
-This wokaround may cause permanent damage to your camera. Use this workaround
-at your own risk**
+This workaround may cause permanent damage to your camera. Use this
+workaround at your own risk**
 
 ## URL
 
