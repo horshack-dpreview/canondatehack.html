@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>	
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Canon R5/R6 Date/Time Hack</title>
+<style type="text/css">
+/* https://designmodo.com/3d-css3-button/ */
+.button3d { 
+    display: inline-block;
+    text-decoration: none;
+    color: #fff;
+    font-weight: bold;
+    background-color: #538fbe;
+    padding: 15px 40px;
+    font-size: 1em;
+    border: 1px solid #2d6898;
+    text-shadow: 0px  -1px 0px rgba(0,0,0,.5);
+    box-shadow: 0px 6px 0px #2b638f, 0px 3px 15px rgba(0,0,0,.4), inset 0px 1px 0px rgba(255,255,255,.3), inset 0px 0px 3px rgba(255,255,255,.5);
+    background-image: linear-gradient(bottom, rgb(73,132,180) 0%, rgb(97,155,203) 100%);
+}
+.button3d:hover {
+    color: red;
+}
+.button3d:active {
+    background-image: linear-gradient(bottom, rgb(88,154,204) 0%, rgb(90,150,199) 100%);
+    box-shadow: 0px 2px 0px #2b638f, 0px 1px 6px rgba(0,0,0,.4), inset 0px 1px 0px rgba(255,255,255,.3), inset 0px 0px 3px rgba(255,255,255,.5);
+    transform: translate(0, 4px);
+    transition: all .2s ease-in-out;
+}
+</style>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script type="text/javascript">
+
+    var ccapiIpAddr;
+    var ccapiPort;
+    
+    $(window).on('load', function() {
+        // load form values from previous session
+        ccapiIpAddr = localStorage.getItem("ipaddr");
+        ccapiPort = localStorage.getItem("port");
+        if (ccapiIpAddr != null)
+            document.getElementById("ipaddr").value = ccapiIpAddr;
+        if (ccapiPort != null)            
+            document.getElementById("port").value = ccapiPort;
+        
+    });    
+
+    // retrieves values from form and palces them in globals. also saves to browser local storage
+    function processFormValues() {
+        ccapiIpAddr = document.getElementById("ipaddr").value;
+        ccapiPort = document.getElementById("port").value;
+        localStorage.setItem("ipaddr", ccapiIpAddr);
+        localStorage.setItem("port", ccapiPort);
+    }
+    
+    // converts a date to a string in Canon's CCAPI format
+    function gen_CCAPI_Date_String(date, isDST) {
+    
+        var daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        
+        if (isDST)
+            date.setTime(date.getTime() - 60*60*1000);
+        
+        strDayOfWeek = daysOfWeek[date.getDay()];
+        strMonth = months[date.getMonth()];
+        
+        var timeZoneOffset = date.getTimezoneOffset();
+        timeZoneOffsetSign = timeZoneOffset > 0 ? '-' : '+';        
+        timeZoneOffsetHours = timeZoneOffset/60;
+        timeZoneOffsetMins = timeZoneOffset % 60;
+        if (isDST)
+            timeZoneOffsetHours++;            
+        var timeZoneOffsetStr = `${timeZoneOffsetSign}${timeZoneOffsetHours.toString().padStart(2, "0")}${timeZoneOffsetMins.toString().padStart(2, "0")}`;
+        
+        return `${strDayOfWeek}, ${date.getDate().toString().padStart(2, "0")} ${strMonth} ${date.getFullYear()} ${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}:${date.getSeconds().toString().padStart(2, "0")} ${timeZoneOffsetStr}`;       
+    }
+    
+    // generates a CCAPI URL
+    function gen_CCAPI_URL(relativeUrl) {
+        return `http://${ccapiIpAddr}:${ccapiPort}/ccapi/${relativeUrl}`;
+    }
+   
+    // performs ah HTTP send operation (POST/PUT)
+    function ccapiSend(httpMethod, url, data) {
+        setCameraDateLabel(`Issuing ${httpMethod} "${url}"`);
+        return new Promise(done => {
+            $.ajax({
+                url: url,
+                type: httpMethod,
+                data: JSON.stringify(data),
+                dataType: "json",
+                timeout: 3000,
+                success: function(data, textStatus, jqXHR) {
+                    done();
+                },
+                error: function(jqXHR, textStatus, errorText) {
+                    setCameraDateLabel(`Failed ${httpMethod} "${url}"`);
+                    alert(`**Send Failed** Error: ${textStatus}, Status Text: ${jqXHR.statusText}, Status Code: ${jqXHR.status}`);
+                }
+            });
+        });
+    }
+    
+    // performs an HTTP get operation
+    function ccapiGet(url) {
+        setCameraDateLabel(`Issuing GET "${url}"`);
+        return new Promise(done => {
+            $.ajax({
+                url: url,
+                type: "GET",
+                dataType: "json",
+                timeout: 3000,
+                success: function(data, textStatus, jqXHR) {
+                    done(data);
+                },
+                error: function(jqXHR, textStatus, errorText) {
+                    setCameraDateLabel(`Failed GET "${url}"`);
+                    alert(`**Get Failed** Error: ${textStatus}, Status Text: ${jqXHR.statusText}, Status Code: ${jqXHR.status}`);
+                }
+            });
+        });
+    }
+    
+    // retrieves the camera's current date
+    async function getCameraDate() {
+        const data = await ccapiGet(gen_CCAPI_URL("ver100/functions/datetime"));
+        return Promise.resolve({ date: new Date(data['datetime']), dst: data['dst'], cameraDateStr: data['datetime'] });
+    }
+    
+    // sets the camera's current date
+    async function setCameraDate(date, isDST) {
+        const cameraNewDateStr = gen_CCAPI_Date_String(date, isDST);
+        await ccapiSend("PUT", gen_CCAPI_URL("ver100/functions/datetime"), { "datetime" : cameraNewDateStr , "dst" : isDST });
+        setCameraDateLabel(cameraNewDateStr);
+        return Promise.resolve();
+    }
+    
+    function setCameraDateLabel(ccapiDateStr) {
+        document.getElementById('cameracurrentdate').innerHTML  = ccapiDateStr;
+    }
+    
+    async function retrieveAndShowCameraDate() {
+        processFormValues();
+        const currentDateInfo = await getCameraDate();
+        setCameraDateLabel(currentDateInfo.cameraDateStr);
+        return Promise.resolve();
+    }
+    
+    // changes the camera date by the specified positive/negative delta
+    async function changeCameraDate(epochSecsAdj) {
+        processFormValues();
+        const currentDateInfo = await getCameraDate();
+        const newDate = new Date(currentDateInfo.date.getTime() + epochSecsAdj*1000);
+        await setCameraDate(newDate, currentDateInfo.dst);
+    }    
+</script>
+</head>
+<body>
+    <h1>Canon Camera Date/Time Change via Camera Control API (CCAPI)</h1>
+    <p>Note: You must launch chrome with <b>--disable-web-security</b> and <b>--user-data-dir=&lt;temp path&gt;</b> otherwise attempts to access the camera will fail with CORS policy errors</p>
+    <label for="ipaddr">Camera IP Address:</label>
+    <input type="text" id="ipaddr" name="ipaddr" size="15" value="192.168.1.150">
+    <label for="port">Camera IP Port:</label>
+    <input type="text" id="port" name="port" size="4" value="8080">
+    <p>Last Camera Date Retrieved/Set: <label id="cameracurrentdate" style="color:red;"></label></p>
+    <button class="button3d" onclick="retrieveAndShowCameraDate()">Get Camera Date</button> 
+    <p></p>
+    <button class="button3d" onclick="changeCameraDate(60*60*24)">Set Camera Date +1 day</button> 
+    <button class="button3d" onclick="changeCameraDate(-60*60*24)">Set Camera Date -1 day</button> 
+    <p>Page Version: v0.01</p>
+</body>
+</html>
