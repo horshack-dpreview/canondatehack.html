@@ -27,6 +27,15 @@
     transform: translate(0, 4px);
     transition: all .2s ease-in-out;
 }
+.ControlsTable {
+    text-align: center;
+    border: none;
+}
+.ControlsTable td, .ControlsTable tr {
+    text-align: center;
+    border: none;
+    padding: 10px;
+}
 </style>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script>
@@ -42,8 +51,21 @@
             document.getElementById("ipaddr").value = ccapiIpAddr;
         if (ccapiPort != null)            
             document.getElementById("port").value = ccapiPort;
-        
-    });    
+        logMessage("Page loaded");
+    });
+
+    // adds a message to the log window
+    function logMessage(msg) {
+        const textarea = document.getElementById("logwindow");
+        textarea.value +=  `${getDateTimeStrCompact()}: ${msg}\r\n`;
+        textarea.scrollTop = textarea.scrollHeight; // auto-scroll
+    }    
+
+    // sets label text for last retrieved/set date or operation status if failed
+    function setCameraDateLabel(labelText) {
+        document.getElementById('cameracurrentdate').innerHTML  = labelText;
+        logMessage(labelText);
+    }
 
     // retrieves values from form and palces them in globals. also saves to browser local storage
     function processFormValues() {
@@ -132,18 +154,22 @@
     async function setCameraDate(date, isDST) {
         const cameraNewDateStr = gen_CCAPI_Date_String(date, isDST);
         await ccapiSend("PUT", gen_CCAPI_URL("ver100/functions/datetime"), { "datetime" : cameraNewDateStr , "dst" : isDST });
-        setCameraDateLabel(cameraNewDateStr);
+        setCameraDateLabel('Changed Date: ' + cameraNewDateStr);
         return Promise.resolve();
     }
     
-    function setCameraDateLabel(ccapiDateStr) {
-        document.getElementById('cameracurrentdate').innerHTML  = ccapiDateStr;
+    // converts a date into a compact date/time (ex: "09/08/2020 06:14:36")
+    function getDateTimeStrCompact(date = new Date()) {
+        const dateOptions = { year: 'numeric', month: '2-digit', day: '2-digit' };
+        const timeOptions = { hour12: false, hour: 'numeric', minute: 'numeric', second: 'numeric' };
+        return date.toLocaleDateString('en', dateOptions)  + ' ' + date.toLocaleTimeString('en', timeOptions);
     }
     
+    // gets the current date from the camera and displays it
     async function retrieveAndShowCameraDate() {
         processFormValues();
         const currentDateInfo = await getCameraDate();
-        setCameraDateLabel(currentDateInfo.cameraDateStr);
+        setCameraDateLabel('Retrieved Date: ' + currentDateInfo.cameraDateStr);
         return Promise.resolve();
     }
     
@@ -163,11 +189,17 @@
     <input type="text" id="ipaddr" name="ipaddr" size="15" value="192.168.1.150">
     <label for="port">Camera IP Port:</label>
     <input type="text" id="port" name="port" size="4" value="8080">
-    <p>Last Camera Date Retrieved/Set: <label id="cameracurrentdate" style="color:red;"></label></p>
-    <button class="button3d" onclick="retrieveAndShowCameraDate()">Get Camera Date</button> 
-    <p></p>
-    <button class="button3d" onclick="changeCameraDate(60*60*24)">Set Camera Date +1 day</button> 
-    <button class="button3d" onclick="changeCameraDate(-60*60*24)">Set Camera Date -1 day</button> 
-    <p>Page Version: v0.02</p>
+    <p>Last Operation: <label id="cameracurrentdate" style="color:red;"></label></p>
+    <table width="600" border="1" cellspacing="0" class="ControlsTable">
+      <tr>
+        <td width="300" colspan="2"><button class="button3d" onclick="retrieveAndShowCameraDate()">Get Camera Date</button> </td>
+      </tr>
+      <tr>
+        <td><button class="button3d" onclick="changeCameraDate(60*60*24)">Set Camera Date +1 day</button> </td>
+        <td><button class="button3d" onclick="changeCameraDate(-60*60*24)">Set Camera Date -1 day</button> </td>
+      </tr>
+    </table>
+    <br />Log:<br />
+    <textarea readonly id="logwindow" rows="10" cols="100" tabindex="-1" style="padding: 0px;"></textarea>       
 </body>
 </html>
