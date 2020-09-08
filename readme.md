@@ -41,7 +41,7 @@ for general web browsing.
 
 ```
 Windows: "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" --disable-web-security --user-data-dir=%homepath%\chromenosecurity
-Mac: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"--disable-web-security --user-data-dir=~/.chromenosecurity 
+Mac: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --disable-web-security --user-data-dir=~/.chromenosecurity 
 Linux: chrome --disable-web-security --user-data-dir=~/.chromenosecurity   
 ```
 
@@ -50,7 +50,6 @@ Linux: chrome --disable-web-security --user-data-dir=~/.chromenosecurity
 Enabling the Control API requires a one-time activation using Canon's
 CCAPI activation tool, which is distributed on Canon's developer
 website at https://developercommunity.usa.canon.com/canon?id=sdk_download.
-I've also included copies of the activation apps in the canomate repository.
 
 1. Connect the camera via USB to computer and run the CCAPI activation tool.
    Disconnect the camera from the computer when complete.
